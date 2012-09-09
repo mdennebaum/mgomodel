@@ -3,10 +3,10 @@ package mgomodel
 import (
 	"encoding/json"
 	"errors"
-	"github.com/mdennebaum/cheshire"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"reflect"
+	"log"
 )
 
 type Modeler interface {
@@ -15,8 +15,12 @@ type Modeler interface {
 }
 
 type ValidatedModeler interface {
-	Validators() []func(interface{}) bool
+	Validators() []func(interface{})error
 	RequiredFields() []string
+}
+
+type DefaultedModeler interface {
+	DefaultValues() map[string]interface{}
 }
 
 type IndexedModeler interface {
@@ -34,59 +38,88 @@ func JSON(inst Modeler) (string, error) {
 	return string(jsonBytes), nil
 }
 
-func Valid(inst ValidatedModeler) bool {
-
+func Valid(inst ValidatedModeler) error {
 	//loop over our required fields
 	for _, requiredField := range inst.RequiredFields() {
+		
+		//grab the field
+		field := reflect.ValueOf(inst).Elem().FieldByName(requiredField)
 
-		//grab a reflect value object for this instance
-		obj := reflect.ValueOf(inst)
-
-		//check if the field is nil in this instance or not
-		if obj.FieldByName(requiredField).IsNil() {
-			//return false if the required field is nil
-			return false
+		//check if this is an invalid field
+		if field == reflect.ValueOf(nil){
+			//kill at compile time. no reason to let it become a runtime issue
+			log.Fatalf("mgomodel.Valid Error: invalid requiredField defined: %s", requiredField)
 		}
+
+		//check if the type is nil
+		switch field.Kind() {
+			case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+				if field.Len() == 0 {
+					return errors.New("required field isn't set: "+requiredField)
+				}
+			case reflect.Interface, reflect.Ptr:
+				if field.IsNil() {
+					return errors.New("required field isn't set: "+requiredField)
+				}
+		}
+
 	}
 
 	//loop over our user defined validator funcs
 	for _, validator := range inst.Validators() {
-
 		//run the validator
-		if !validator(inst) {
+		err := validator(inst)
+		
+		//run the validator
+		if err != nil{
+			//print the error
+			log.Println(err.Error())
+
 			//if validator is false return false
-			return false
+			return err
 		}
 	}
 
 	//everything is skippy
-	return true
+	return nil
 
+}
+
+func setDefaults(inst Modeler){
+	for key, val := range inst.(DefaultedModeler).DefaultValues() {
+		reflect.ValueOf(inst).Elem().FieldByName(key).Set(reflect.ValueOf(val))
+	}
 }
 
 func Save(inst Modeler) error {
 
 	//check if the id is set or not
 	if inst.ID() == "" {
+		
+		//if DefaulyValues are defined then set them
+		if reflect.ValueOf(inst).MethodByName("DefaultValues").IsValid() {
+			setDefaults(inst)
+		}
+
 		//this is a new doc so lets just insert it
-		return cheshire.Mongo().GetCollection(inst.Collection()).Insert(inst)
+		return Mongo().Collection(inst.Collection()).Insert(inst)
 	}
 
 	//this is a existing doc so lets update it
-	return cheshire.Mongo().GetCollection(inst.Collection()).UpdateId(inst.ID(), inst)
+	return Mongo().Collection(inst.Collection()).UpdateId(inst.ID(), inst)
 }
 
 func Delete(inst Modeler) error {
 
-	//check if the id is set or not
+	//check if the id is set orMethodByName("")not
 	if inst.ID() != "" {
 		//delete this obj
-		return cheshire.Mongo().GetCollection(inst.Collection()).RemoveId(inst.ID())
+		return Mongo().Collection(inst.Collection()).RemoveId(inst.ID())
 	}
 
 	return errors.New("Can't delete an unloaded object")
 }
 
 func Load(inst Modeler) error {
-	return cheshire.Mongo().GetCollection(inst.Collection()).FindId(inst.ID()).One(inst)
+	return Mongo().Collection(inst.Collection()).FindId(inst.ID()).One(inst)
 }

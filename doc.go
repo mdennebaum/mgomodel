@@ -14,8 +14,8 @@ Example:
 		"labix.org/v2/mgo/bson"
 		"time"
 		"regexp"
-        "crypto/sha1"
-        "errors"
+		"crypto/sha1"
+		"errors"
 	)
 
 	type User struct{
@@ -23,8 +23,6 @@ Example:
 		Username string
 		Password string
 		Email string
-		CreatedAt time.Time
-		Roles []string
 	}
 
 	//satisfy the modler interface
