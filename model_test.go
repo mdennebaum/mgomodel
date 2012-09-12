@@ -74,7 +74,7 @@ func (this *User) Validators() []func(interface{})error {
 }
 
 //TestCreateUser tests validating and creating
-func TestCreateUser(t *testing.T){
+func TestValidateAndSave(t *testing.T){
 	//init the mongo connection
 	Mongo().Connect("localhost")
 
@@ -99,8 +99,8 @@ func TestCreateUser(t *testing.T){
 	}
 }
 
-//TestRequiredFieldUser validating required field validation
-func TestRequiredFieldUser(t *testing.T){
+//TestRequiredField validating required field validation
+func TestRequiredField(t *testing.T){
 	//init the mongo connection
 	Mongo().Connect("localhost")
 
@@ -117,5 +117,37 @@ func TestRequiredFieldUser(t *testing.T){
 	if Valid(user) == nil{
 		t.Error("user is valid but it shouldnt be")
 		t.Fail()
+	}
+}
+
+//TestRequiredFieldUser validating required field validation
+func TestLoadAndDelete(t *testing.T){
+	//init the mongo connection
+	Mongo().Connect("localhost")
+
+	//close mongo once were done
+	defer Mongo().Session.Close()
+
+	//set the default database
+	Mongo().SetDB("test")
+	
+	//create a test user
+	testuser := NewUser("mattdennebaumsdfsdf","s0m#Pa$2wD","matt@quantumsp.in")
+	Save(testuser)
+
+	//reload the test user
+	user := &User{Id: testuser.ID()}
+	err := Load(user)
+
+	//check to be sure the document loaded
+	if err != nil{
+		t.Error("user failed to load")
+		t.Fail()
+	}else{
+		//clean up the user
+		err := Delete(user)
+		if err != nil {
+			t.Error(err.Error())
+		}
 	}
 }
