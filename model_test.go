@@ -137,11 +137,12 @@ func TestLoadAndDelete(t *testing.T){
 
 	//reload the test user
 	user := &User{Id: testuser.ID()}
+	
 	err := Load(user)
 
 	//check to be sure the document loaded
 	if err != nil{
-		t.Error("user failed to load")
+		t.Error(err.Error())
 		t.Fail()
 	}else{
 		//clean up the user

@@ -111,7 +111,7 @@ func Save(inst Modeler) error {
 		field := reflect.ValueOf(inst).Elem().FieldByName("Id")
 
 		//make sure this model has an id field
-		if field == reflect.ValueOf(nil){
+		if field != reflect.ValueOf(nil){
 			//set the Id field so we have it later
 			field.Set(reflect.ValueOf(bson.NewObjectId()))
 		}
