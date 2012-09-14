@@ -64,8 +64,11 @@ Example:
 		//set the default database
 		mgomodel.Mongo().SetDB("test")
 		
-		user := &User{}
-		mgomodel.Mongo().Collection("users").find(bson.M{"Username":"mattdennebaum"}).One(user)
+		//create an empty user instance to hold our user document
+		user := User{}
+
+		//find the user with the username
+		mgomodel.Mongo().Collection("users").find(bson.M{"Username":"mattdennebaum"}).One(&user)
 
 		//create a new person object
 		person := NewPerson("Matt Dennebaum",user.ID().String())

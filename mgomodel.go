@@ -147,3 +147,8 @@ func Delete(inst Modeler) error {
 func Load(inst Modeler) error {
 	return Mongo().Collection(inst.Collection()).FindId(inst.ID()).One(inst)
 }
+
+//Load a document. You must first create an empty Model and set the Id
+func Find(inst Modeler) []Modeler {
+	return Mongo().Collection(inst.Collection()).FindId(inst.ID()).One(inst)
+}
